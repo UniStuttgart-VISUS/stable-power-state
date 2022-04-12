@@ -14,7 +14,7 @@ void GetHardwareAdapter(IDXGIFactory4* pFactory, IDXGIAdapter1** ppAdapter)
     for (UINT AdapterIndex = 0; ; ++AdapterIndex)
     {
         IDXGIAdapter1* pAdapter = nullptr;
-        if (DXGI_ERROR_NOT_FOUND == pFactory->EnumAdapters1(AdapterIndex, &pAdapter;))
+        if (DXGI_ERROR_NOT_FOUND == pFactory->EnumAdapters1(AdapterIndex, &pAdapter))
         {
             break;
         }
@@ -31,20 +31,20 @@ void GetHardwareAdapter(IDXGIFactory4* pFactory, IDXGIAdapter1** ppAdapter)
 int main(int argc, char *argv[])
 {
     IDXGIFactory4* pFactory = nullptr;
-    if (FAILED(CreateDXGIFactory1(IID_PPV_ARGS(&pFactory;))))
+    if (FAILED(CreateDXGIFactory1(IID_PPV_ARGS(&pFactory))))
     {
         Error("CreateDXGIFactory1 failed");
     }
 
     IDXGIAdapter1* pAdapter = nullptr;
-    GetHardwareAdapter(pFactory, &pAdapter;);
+    GetHardwareAdapter(pFactory, &pAdapter);
     if (!pAdapter)
     {
         Error("Failed to find DX12-compatible DXGI adapter");
     }
 
     ID3D12Device* pDevice = nullptr;
-    if (FAILED(D3D12CreateDevice(pAdapter, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&pDevice;))))
+    if (FAILED(D3D12CreateDevice(pAdapter, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&pDevice))))
     {
         Error("D3D12CreateDevice failed for Adapter");
     }
