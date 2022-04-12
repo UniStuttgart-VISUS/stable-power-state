@@ -1,50 +1,50 @@
-#include <cstdio>
+#include <iostream>
+#include <vector>
+
 #include <dxgi1_4.h>
 #include <d3d12.h>
+#include <wrl/client.h>
 
-void Error(const char* str) {
-    fprintf(stderr, "ERROR: %s\n", str);
-    Sleep(INFINITE);
-}
-
-void GetHardwareAdapter(IDXGIFactory4* pFactory, IDXGIAdapter1** ppAdapter) {
-    *ppAdapter = nullptr;
-    for (UINT AdapterIndex = 0;; ++AdapterIndex) {
-        IDXGIAdapter1* pAdapter = nullptr;
-        if (DXGI_ERROR_NOT_FOUND == pFactory->EnumAdapters1(AdapterIndex, &pAdapter)) {
-            break;
-        }
-
-        if (SUCCEEDED(D3D12CreateDevice(pAdapter, D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr))) {
-            *ppAdapter = pAdapter;
-            return;
-        }
-        pAdapter->Release();
-    }
-}
+using Microsoft::WRL::ComPtr;
 
 int main() {
-    IDXGIFactory4* pFactory = nullptr;
-    if (FAILED(CreateDXGIFactory1(IID_PPV_ARGS(&pFactory)))) {
-        Error("CreateDXGIFactory1 failed");
+    ComPtr<IDXGIFactory4> factory;
+    if (FAILED(CreateDXGIFactory1(IID_PPV_ARGS(&factory)))) {
+        std::wcout << L"CreateDXGIFactory1 failed!" << std::endl;
+        return 1;
     }
 
-    IDXGIAdapter1* pAdapter = nullptr;
-    GetHardwareAdapter(pFactory, &pAdapter);
-    if (!pAdapter) {
-        Error("Failed to find DX12-compatible DXGI adapter");
+    std::vector<ComPtr<ID3D12Device>> devices;
+    ComPtr<IDXGIAdapter1> adapter;
+    for (UINT i = 0; factory->EnumAdapters1(i, &adapter) != DXGI_ERROR_NOT_FOUND; ++i) {
+        DXGI_ADAPTER_DESC1 desc = {};
+        if (SUCCEEDED(adapter->GetDesc1(&desc))) {
+            std::wcout << L"Adapter: " << desc.Description << std::endl;
+        } else {
+            std::wcout << L"Adapter: Unknown" << std::endl;
+        }
+
+        ComPtr<ID3D12Device> device;
+        if (FAILED(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device)))) {
+            std::wcout << L"  D3D12CreateDevice failed!" << std::endl;
+            continue;
+        }
+
+        if (FAILED(device->SetStablePowerState(TRUE))) {
+            std::wcout << L"  SetStablePowerState failed! Is the Win10SDK installed and the developer mode active?" << std::endl;
+            continue;
+        }
+
+        std::wcout << "  StablePowerState enabled!" << std::endl;
+        devices.push_back(device);
     }
 
-    ID3D12Device* pDevice = nullptr;
-    if (FAILED(D3D12CreateDevice(pAdapter, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&pDevice)))) {
-        Error("D3D12CreateDevice failed for Adapter");
+    if (devices.empty()) {
+        std::wcout << L"No devices with static power state found!" << std::endl;
+        return 1;
     }
 
-    if (FAILED(pDevice->SetStablePowerState(TRUE))) {
-        Error("SetStablePowerState failed. Do you have the Win10 SDK installed?");
-    }
-
-    printf("SUCCESS. Close this program to restore default clocks.\n");
+    std::wcout << L"Close this program to restore default clocks." << std::endl;
     Sleep(INFINITE);
 
     return 0;
